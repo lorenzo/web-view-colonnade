@@ -10,6 +10,8 @@ import Web.View (renderText)
 import qualified Colonnade as C
 import qualified Colonnade.Encode as E
 import qualified Data.Text as T
+import Web.View.Types (Attributes(..))
+import qualified Data.Map as Map
 
 import Data.String (IsString(fromString))
 
@@ -59,7 +61,7 @@ spec = do
         people = [Person "Alice" 30, Person "Bob" 25]
 
     it "generates correct HTML structure" $ do
-      let html = encodeHtmlTable [] personColonnade people
+      let html = encodeHtmlTable mempty personColonnade people
       let result = renderText html
       T.isInfixOf "<table" result `shouldBe` True
       T.isInfixOf "<thead" result `shouldBe` True
@@ -74,19 +76,19 @@ spec = do
     it "preserves table attributes" $ do
       let attr = "class"
           val = "test-table"
-          html = encodeHtmlTable [(attr, val)] personColonnade []
+          html = encodeHtmlTable (Attributes [] (Map.singleton attr val)) personColonnade []
           rendered = renderText html
       T.isInfixOf val rendered `shouldBe` True
 
   describe "encodeCellTable" $ do
     let personColonnade = mconcat
-          [ C.headed "Name" (\p -> Cell [("class", "name")] (E.text $ name p))
-          , C.headed "Age" (\p -> Cell [("class", "age")] (E.text . T.pack . show $ age p))
+          [ C.headed "Name" (\p -> Cell (Attributes [] (Map.singleton "class" "name")) (E.text $ name p))
+          , C.headed "Age" (\p -> Cell (Attributes [] (Map.singleton "class" "age")) (E.text . T.pack . show $ age p))
           ]
         people = [Person "Alice" 30, Person "Bob" 25]
 
     it "preserves cell attributes" $ do
-      let html = encodeCellTable [] personColonnade people
+      let html = encodeCellTable mempty personColonnade people
           rendered = renderText html
       T.isInfixOf "name" rendered `shouldBe` True
       T.isInfixOf "age" rendered `shouldBe` True
@@ -126,7 +128,7 @@ spec = do
         people = [Person "Alice" 30, Person "Bob" 25]
 
     it "includes all columns (capping not implemented yet)" $ do
-      let html = encodeCappedTable 2 [] personColonnade people
+      let html = encodeCappedTable 2 mempty personColonnade people
           rendered = renderText html
       T.isInfixOf "Name" rendered `shouldBe` True
       T.isInfixOf "Age" rendered `shouldBe` True
@@ -136,15 +138,15 @@ spec = do
 
   describe "encodeCappedCellTable" $ do
     let personColonnade = mconcat
-          [ C.headed "Name" (\p -> Cell [("class", "name")] (E.text $ name p))
-          , C.headed "Age" (\p -> Cell [("class", "age")] (E.text . T.pack . show $ age p))
-          , C.headed "Extra1" (const $ Cell [] (E.text "extra1"))
-          , C.headed "Extra2" (const $ Cell [] (E.text "extra2"))
+          [ C.headed "Name" (\p -> Cell (Attributes [] (Map.singleton "class" "name")) (E.text $ name p))
+          , C.headed "Age" (\p -> Cell (Attributes [] (Map.singleton "class" "age")) (E.text . T.pack . show $ age p))
+          , C.headed "Extra1" (const $ Cell mempty (E.text "extra1"))
+          , C.headed "Extra2" (const $ Cell mempty (E.text "extra2"))
           ]
         people = [Person "Alice" 30, Person "Bob" 25]
 
     it "includes all columns and preserves attributes (capping not implemented yet)" $ do
-      let html = encodeCappedCellTable 2 [] personColonnade people
+      let html = encodeCappedCellTable 2 mempty personColonnade people
           rendered = renderText html
       T.isInfixOf "name" rendered `shouldBe` True
       T.isInfixOf "age" rendered `shouldBe` True
@@ -161,11 +163,11 @@ spec = do
 
     it "applies all attribute functions" $ do
       let html = encodeTable
-            (E.headednessPure ([("class", "head")], [("class", "head-row")]))
-            [("class", "body")]
-            (\_ -> [("class", "row")])
+            (E.headednessPure (Attributes [] (Map.singleton "class" "head"), Attributes [] (Map.singleton "class" "head-row")))
+            (Attributes [] (Map.singleton "class" "body"))
+            (\_ -> Attributes [] (Map.singleton "class" "row"))
             (\_ -> V.tag "td" mempty)
-            [("class", "table")]
+            (Attributes [] (Map.singleton "class" "table"))
             personColonnade
             people
           rendered = renderText html

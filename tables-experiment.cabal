@@ -74,7 +74,8 @@ library
                       colonnade,
                       web-view,
                       text,
-                      vector
+                      vector,
+                      containers
 
     -- Directories containing source files.
     hs-source-dirs:   src
@@ -141,4 +142,6 @@ test-suite tables-experiment-test
         colonnade,
         web-view,
         text,
-        vector
+        vector,
+                      containers,
+        containers
