@@ -12,7 +12,6 @@ module WebView.Colonnade
   ( -- * Apply
     encodeHtmlTable
   , encodeCellTable
-  , encodeCellTableSized
   , encodeTable
   
     -- * Cell
@@ -31,11 +30,11 @@ import qualified Colonnade.Encode as E
 import qualified Data.Text as T
 import Data.String (IsString(..))
 import Data.Foldable (for_)
-import Web.View.Types (Attributes)
+import Web.View.Types (Mod)
 
 -- | A table cell with attributes and content
 data Cell c = Cell
-  { cellAttributes :: Attributes c  -- ^ Attributes for the td/th element
+  { cellAttributes :: Mod c  -- ^ Attributes for the td/th element
   , cellHtml :: V.View c ()      -- ^ Content inside the cell
   }
 
@@ -67,7 +66,7 @@ textCell :: T.Text -> Cell c
 textCell = htmlCell . E.text
 
 -- | Convert a cell to an HTML element
-htmlFromCell :: (Attributes c -> V.View c () -> V.View c ()) -> (Cell c) -> V.View c ()
+htmlFromCell :: (Mod c -> V.View c () -> V.View c ()) -> (Cell c) -> V.View c ()
 htmlFromCell f (Cell attrs content) = f attrs content
 
 -- | Encode a table with HTML content
@@ -75,7 +74,7 @@ encodeHtmlTable ::
   forall h f x c.
   (E.Headedness h, Foldable f) =>
   -- | Attributes of @<table>@ element
-  Attributes c ->
+  Mod c ->
   -- | How to encode data as columns
   Colonnade h x (V.View c ()) ->
   -- | Collection of data
@@ -93,52 +92,18 @@ encodeCellTable ::
   forall h f x c.
   (E.Headedness h, Foldable f) =>
   -- | Attributes of @<table>@ element
-  Attributes c ->
+  Mod c ->
   -- | How to encode data as columns
   Colonnade h x (Cell c) ->
   -- | Collection of data
   f x ->
   V.View c ()
-encodeCellTable tableAttrs colonnade xs =
-  V.tag "table" (\a -> tableAttrs <> a) $ do
-    case E.headednessExtract @h of
-      Nothing -> pure ()
-      Just _ -> do
-        V.tag "thead" mempty $
-          V.tag "tr" mempty $
-            E.headerMonadicGeneral_ colonnade (\cell ->
-              htmlFromCell (\attrs -> V.tag "th" (\a -> attrs <> a)) cell)
-    V.tag "tbody" mempty $
-      for_ xs $ \x ->
-        V.tag "tr" mempty $
-          E.rowMonadic colonnade (\cell ->
-            htmlFromCell (\attrs -> V.tag "td" (\a -> attrs <> a)) cell) x
-
--- | Encode a table with sized columns
-encodeCellTableSized ::
-  forall h f x c.
-  (E.Headedness h, E.Headedness (E.Sized Int h), Foldable f) =>
-  -- | Attributes of @<table>@ element
-  Attributes c ->
-  -- | How to encode data as columns
-  Colonnade (E.Sized Int h) x (Cell c) ->
-  -- | Collection of data
-  f x ->
-  V.View c ()
-encodeCellTableSized tableAttrs colonnade xs =
-  V.tag "table" (\a -> tableAttrs <> a) $ do
-    case E.headednessExtract @(E.Sized Int h) of
-      Nothing -> pure ()
-      Just _ -> do
-        V.tag "thead" mempty $
-          V.tag "tr" mempty $
-            E.headerMonadicGeneral_ colonnade (\cell ->
-              htmlFromCell (\attrs -> V.tag "th" (\a -> attrs <> a)) cell)
-    V.tag "tbody" mempty $
-      for_ xs $ \x ->
-        V.tag "tr" mempty $
-          E.rowMonadic colonnade (\cell ->
-            htmlFromCell (\attrs -> V.tag "td" (\a -> attrs <> a)) cell) x
+encodeCellTable =
+  encodeTable
+    (E.headednessPure (mempty, mempty))
+    mempty
+    (const mempty)
+    htmlFromCell
 
 {- | Encode a table. This handles a very general case and
   is seldom needed by users. One of the arguments provided is
@@ -148,29 +113,29 @@ encodeTable ::
   forall h f x v c.
   (E.Headedness h, Foldable f) =>
   -- | Attributes and structure for header section
-  h (Attributes c, Attributes c) ->
+  h (Mod c, Mod c) ->
   -- | Attributes for tbody element
-  Attributes c ->
+  Mod c ->
   -- | Attributes for each tr element
-  (x -> Attributes c) ->
+  (x -> Mod c) ->
   -- | Cell wrapper function
-  ((Attributes c -> V.View c () -> V.View c ()) -> v -> V.View c ()) ->
+  ((Mod c -> V.View c () -> V.View c ()) -> v -> V.View c ()) ->
   -- | Table attributes
-  Attributes c ->
+  Mod c ->
   -- | How to encode data as columns
   Colonnade h x v ->
   -- | Collection of data
   f x ->
   V.View c ()
 encodeTable mtheadAttrs tbodyAttrs trAttrs wrapContent tableAttrs colonnade xs =
-  V.tag "table" (const tableAttrs) $ do
+  V.tag "table" tableAttrs $ do
     d1 <- case E.headednessExtractForall of
       Nothing -> pure mempty
       Just extractForall -> do
         let (theadAttrs, theadTrAttrs) = extract mtheadAttrs
-        V.tag "thead" (const theadAttrs) $
-          V.tag "tr" (const theadTrAttrs) $ do
-            foldlMapM' (wrapContent (\a -> V.tag "th" (const a)) . extract . E.oneColonnadeHead) (E.getColonnade colonnade)
+        V.tag "thead" theadAttrs $
+          V.tag "tr" theadTrAttrs $ do
+            foldlMapM' (wrapContent (V.tag "th") . extract . E.oneColonnadeHead) (E.getColonnade colonnade)
         where
           extract :: forall y. h y -> y
           extract = E.runExtractForall extractForall
@@ -189,18 +154,18 @@ foldlMapM' f xs = foldr f' pure xs mempty
 encodeBody ::
   (Foldable f) =>
   -- | Attributes of each @\<tr\>@ element
-  (a -> Attributes c) ->
+  (a -> Mod c) ->
   -- | Wrap content and convert to 'Html'
-  ((Attributes c -> V.View c () -> V.View c ()) -> v -> V.View c ()) ->
+  ((Mod c -> V.View c () -> V.View c ()) -> v -> V.View c ()) ->
   -- | Attributes of @\<tbody\>@ element
-  Attributes c ->
+  Mod c ->
   -- | How to encode data as a row
   Colonnade h a v ->
   -- | Collection of data
   f a ->
   V.View c ()
 encodeBody trAttrs wrapContent tbodyAttrs colonnade xs = do
-  V.tag "tbody" (const tbodyAttrs) $ do
+  V.tag "tbody" tbodyAttrs $ do
     for_ xs $ \x -> do
-      V.tag "tr" (const (trAttrs x)) $ do
-        E.rowMonadic colonnade (wrapContent (\a -> V.tag "td" (const a))) x
+      V.tag "tr" (trAttrs x) $ do
+        E.rowMonadic colonnade (wrapContent (V.tag "td")) x

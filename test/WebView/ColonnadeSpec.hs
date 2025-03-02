@@ -6,13 +6,12 @@ import Test.Hspec
 import Test.QuickCheck
 import WebView.Colonnade
 import qualified Web.View.View as V
+import qualified Web.View.Style as V
 import qualified Web.View.Element as E
 import Web.View (renderText)
 import qualified Colonnade as C
 import qualified Colonnade.Encode as E
 import qualified Data.Text as T
-import Web.View.Types (Attributes(..))
-import qualified Data.Map as Map
 import Data.String (IsString(fromString))
 import Data.String.Interpolate (i)
 
@@ -59,7 +58,7 @@ spec = do
         people = [Person "Alice" 30, Person "Bob" 25]
 
     it "generates correct HTML structure" $ do
-      let html = encodeHtmlTable (Attributes [] (Map.singleton "class" "table")) personColonnade people
+      let html = encodeHtmlTable (V.extClass "table") personColonnade people
       let result = renderText html
       result `shouldBe` [i|<table class='table'>
   <thead>
@@ -83,7 +82,7 @@ spec = do
     it "preserves table attributes" $ do
       let attr = "class"
           val = "test-table"
-          html = encodeHtmlTable (Attributes [] (Map.singleton attr val)) personColonnade []
+          html = encodeHtmlTable (V.att attr val) personColonnade []
           rendered = renderText html
       rendered `shouldBe` [i|<table class='#{val}'>
   <thead>
@@ -97,8 +96,8 @@ spec = do
 
   describe "encodeCellTable" $ do
     let personColonnade = mconcat
-          [ C.headed "Name" (\p -> Cell (Attributes [] (Map.singleton "class" "name")) (E.text $ name p))
-          , C.headed "Age" (\p -> Cell (Attributes [] (Map.singleton "class" "age")) (E.text . T.pack . show $ age p))
+          [ C.headed "Name" (\p -> Cell (V.extClass "name") (E.text $ name p))
+          , C.headed "Age" (\p -> Cell (V.extClass "age") (E.text . T.pack . show $ age p))
           ]
         people = [Person "Alice" 30, Person "Bob" 25]
 
@@ -152,11 +151,11 @@ spec = do
 
     it "applies all attribute functions" $ do
       let html = encodeTable
-            (E.headednessPure (Attributes [] (Map.singleton "class" "head"), Attributes [] (Map.singleton "class" "head-row")))
-            (Attributes [] (Map.singleton "class" "body"))
-            (\_ -> Attributes [] (Map.singleton "class" "row"))
-            (\tagFn content -> tagFn (Attributes [] (Map.singleton "class" "i")) content)
-            (Attributes [] (Map.singleton "class" "table"))
+            (E.headednessPure (V.extClass "head", V.extClass "head-row"))
+            (V.extClass "body")
+            (\_ -> V.extClass "row")
+            (\tagFn content -> tagFn (V.extClass "i") content)
+            (V.extClass "table")
             personColonnade
             people
           rendered = renderText html
