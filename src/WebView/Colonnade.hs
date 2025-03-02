@@ -86,7 +86,7 @@ encodeHtmlTable =
     (E.headednessPure (mempty, mempty))
     mempty
     (const mempty)
-    (\el -> el mempty)
+    (\_ content -> content)
 
 -- | Encode a table with cells that may have attributes
 encodeCellTable ::
@@ -99,12 +99,20 @@ encodeCellTable ::
   -- | Collection of data
   f x ->
   V.View c ()
-encodeCellTable =
-  encodeTable
-    (E.headednessPure (mempty, mempty))
-    mempty
-    (const mempty)
-    htmlFromCell
+encodeCellTable tableAttrs colonnade xs =
+  V.tag "table" (\a -> tableAttrs <> a) $ do
+    case E.headednessExtract @h of
+      Nothing -> pure ()
+      Just _ -> do
+        V.tag "thead" mempty $
+          V.tag "tr" mempty $
+            E.headerMonadicGeneral_ colonnade (\cell ->
+              htmlFromCell (\attrs -> V.tag "th" (\a -> attrs <> a)) cell)
+    V.tag "tbody" mempty $
+      for_ xs $ \x ->
+        V.tag "tr" mempty $
+          E.rowMonadic colonnade (\cell ->
+            htmlFromCell (\attrs -> V.tag "td" (\a -> attrs <> a)) cell) x
 
 -- | Encode a table with sized columns
 encodeCellTableSized ::
@@ -117,38 +125,20 @@ encodeCellTableSized ::
   -- | Collection of data
   f x ->
   V.View c ()
-encodeCellTableSized =
-  encodeTableSized
-    (E.headednessPure ([], []))
-    mempty
-    (const mempty)
-    htmlFromCell
-
-
-
-{- | Encode a table with tiered header rows.
-<table>
-    <thead>
-        <tr class='category'>
-            <th colspan="2">Personal</th>
-            <th colspan="1">Work</th>
-        </tr>
-        <tr class="subcategory">
-            <th colspan="1">Name</th>
-            <th colspan="1">Age</th>
-            <th colspan="1">Dept.</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td>Thaddeus</td>
-            <td>34</td>
-            <td class='sales'>Sales</td>
-        </tr>
-    </tbody>
-</table>
-encodeCappedCellTable ::
--}
+encodeCellTableSized tableAttrs colonnade xs =
+  V.tag "table" (\a -> tableAttrs <> a) $ do
+    case E.headednessExtract @(E.Sized Int h) of
+      Nothing -> pure ()
+      Just _ -> do
+        V.tag "thead" mempty $
+          V.tag "tr" mempty $
+            E.headerMonadicGeneral_ colonnade (\cell ->
+              htmlFromCell (\attrs -> V.tag "th" (\a -> attrs <> a)) cell)
+    V.tag "tbody" mempty $
+      for_ xs $ \x ->
+        V.tag "tr" mempty $
+          E.rowMonadic colonnade (\cell ->
+            htmlFromCell (\attrs -> V.tag "td" (\a -> attrs <> a)) cell) x
 
 -- | Encode a table with full control over attributes and structure
 encodeTable ::

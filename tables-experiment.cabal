@@ -91,8 +91,7 @@ executable tables-experiment
   main-is:          Main.hs
 
   -- Modules included in this executable, other than Main.
-  -- cabal-fmt: expand app
-  other-modules:    Main
+  -- other-modules:
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
@@ -116,10 +115,7 @@ test-suite tables-experiment-test
   default-language: GHC2021
 
   -- Modules included in this executable, other than Main.
-  -- cabal-fmt: expand test
-  other-modules:
-    Main
-    WebView.ColonnadeSpec
+  -- other-modules:
 
   -- LANGUAGE extensions used by modules in this package.
   other-extensions: OverloadedStrings
