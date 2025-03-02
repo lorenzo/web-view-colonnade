@@ -39,14 +39,14 @@ import Web.View.Types (Mod)
   >>> :set -XOverloadedStrings
   >>> import Data.Monoid (mconcat,(<>))
   >>> import Data.Char (toLower)
+  >>  import qualified Data.Text as T
   >>> import Data.Profunctor (Profunctor(lmap))
-  >>> import Colonnade (Colonnade,Headed,Headless,headed,cap,Fascia(..))
-  >>> import Web.View (renderText)
-  >>> import qualified Web.View.View as V
-  >>> import qualified Web.View.Element as E
-  >>> import qualified Web.View.Style as S
+  >>> import Colonnade (Colonnade,Headed,Headless,headed)
+  >>> import Web.View
+  >>> import qualified Web.View.Style as V 
+  >>> import qualified Web.View.Types as V
   >>> data Department = Management | Sales | Engineering deriving (Show,Eq)
-  >>> data Employee = Employee { name :: String, department :: Department, age :: Int }
+  >>> data Employee = Employee { name :: T.Text, department :: Department, age :: Int }
 
   We define some employees that we will display in a table:
 
@@ -63,12 +63,12 @@ import Web.View.Types (Mod)
   engineers using a @\<strong\>@ tag.
 
   >>> :{
-  let tableEmpA :: Colonnade Headed Employee (V.View c ())
+  let tableEmpA :: Colonnade Headed Employee (View c ())
       tableEmpA = mconcat
         [ headed "Name" $ \emp -> case department emp of
-            Engineering -> E.strong (E.text (T.pack (name emp)))
-            _ -> E.text (T.pack (name emp))
-        , headed "Age" (E.text . T.pack . show . age)
+            Engineering -> el bold (text (name emp))
+            _ -> text (name emp)
+        , headed "Age" (text . T.pack . show . age)
         ]
   :}
 
@@ -78,7 +78,7 @@ import Web.View.Types (Mod)
   Let's continue:
 
   >>> let customAttrs = V.extClass "stylish-table" <> V.att "id" "main-table"
-  >>> putStrLn $ renderText (encodeHtmlTable customAttrs tableEmpA employees)
+  >>> renderText (encodeHtmlTable customAttrs tableEmpA employees)
   <table class='stylish-table' id='main-table'>
     <thead>
       <tr>
@@ -92,7 +92,7 @@ import Web.View.Types (Mod)
         <td>34</td>
       </tr>
       <tr>
-        <td><strong>Lucia</strong></td>
+        <td><div class="bold">Lucia</div></td>
         <td>33</td>
       </tr>
       <tr>
@@ -105,7 +105,7 @@ import Web.View.Types (Mod)
   Excellent. As expected, Lucia's name is wrapped in a @\<strong\>@ tag
   since she is an engineer.
 
-  One limitation of using @V.View@ as the content
+  One limitation of using @View@ as the content
   type of a 'Colonnade' is that we are unable to add attributes to
   the @\<td\>@ and @\<th\>@ elements. This library provides the 'Cell' type
   to work around this problem. A 'Cell' is just a @V.View@ content and a set
@@ -119,7 +119,7 @@ import Web.View.Types (Mod)
   let tableDept :: Colonnade Headed Department (Cell c)
       tableDept = mconcat
         [ headed "Dept." $ \d -> Cell
-            (V.extClass (T.pack (map toLower (show d))))
+            (V.extClass (V.ClassName $ T.pack (map Data.Char.toLower (show d))))
             (E.text (T.pack (show d)))
         ]
   :}
@@ -131,7 +131,7 @@ import Web.View.Types (Mod)
   'encodeCellTable' instead of 'encodeHtmlTable':
 
   >>> let twoDepts = [Sales,Management]
-  >>> putStrLn $ renderText (encodeCellTable customAttrs tableDept twoDepts)
+  >>> renderText (encodeCellTable customAttrs tableDept twoDepts)
   <table class='stylish-table' id='main-table'>
     <thead>
       <tr>
@@ -157,7 +157,7 @@ import Web.View.Types (Mod)
   >>> let tableEmpB = lmap department tableDept
   >>> :t tableEmpB
   tableEmpB :: Colonnade Headed Employee (Cell c)
-  >>> putStrLn $ renderText (encodeCellTable customAttrs tableEmpB employees)
+  >>> renderText (encodeCellTable customAttrs tableEmpB employees)
   <table class='stylish-table' id='main-table'>
     <thead>
       <tr>
@@ -195,7 +195,7 @@ import Web.View.Types (Mod)
   >>> let tableEmpC = fmap htmlCell tableEmpA <> tableEmpB
   >>> :t tableEmpC
   tableEmpC :: Colonnade Headed Employee (Cell c)
-  >>> putStrLn $ renderText (encodeCellTable customAttrs tableEmpC employees)
+  >>> renderText (encodeCellTable customAttrs tableEmpC employees)
   <table class='stylish-table' id='main-table'>
     <thead>
       <tr>
