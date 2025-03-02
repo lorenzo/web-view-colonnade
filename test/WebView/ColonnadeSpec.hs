@@ -59,9 +59,9 @@ spec = do
         people = [Person "Alice" 30, Person "Bob" 25]
 
     it "generates correct HTML structure" $ do
-      let html = encodeHtmlTable mempty personColonnade people
+      let html = encodeHtmlTable (Attributes [] (Map.singleton "class" "table")) personColonnade people
       let result = renderText html
-      result `shouldBe` [i|<table>
+      result `shouldBe` [i|<table class='table'>
   <thead>
     <tr>
       <th>Name</th>

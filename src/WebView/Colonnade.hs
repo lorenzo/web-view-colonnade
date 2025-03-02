@@ -86,7 +86,7 @@ encodeHtmlTable =
     (E.headednessPure (mempty, mempty))
     mempty
     (const mempty)
-    (\_ content -> content)
+    (\tagFn content -> tagFn mempty content)
 
 -- | Encode a table with cells that may have attributes
 encodeCellTable ::
