@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
 module WebView.ColonnadeSpec (spec) where
 
 import Test.Hspec
@@ -12,8 +13,8 @@ import qualified Colonnade.Encode as E
 import qualified Data.Text as T
 import Web.View.Types (Attributes(..))
 import qualified Data.Map as Map
-
 import Data.String (IsString(fromString))
+import Data.String.Interpolate (i)
 
 data Person = Person
   { name :: T.Text
@@ -29,26 +30,23 @@ spec = do
   describe "Cell" $ do
     it "implements IsString" $ do
       let s = "test"
-          cell = fromString s :: Cell
+          cell = fromString s :: Cell c
       let result = renderText (htmlFromCell (\_ -> V.tag "td" mempty) cell)
-      T.isInfixOf (T.pack s) result `shouldBe` True
-      T.isInfixOf "<td" result `shouldBe` True
-      T.isInfixOf "</td>" result `shouldBe` True
+      result `shouldBe` [i|<td>#{s}</td>|]
 
     it "implements Semigroup" $ do
       let s1 = "test1"
           s2 = "test2"
-          cell1 = fromString s1 :: Cell
-          cell2 = fromString s2 :: Cell
+          cell1 = fromString s1 :: Cell c
+          cell2 = fromString s2 :: Cell c
           combined = cell1 <> cell2
       let result = renderText (htmlFromCell (\_ -> V.tag "td" mempty) combined)
-      T.isInfixOf (T.pack s1 <> T.pack s2) result `shouldBe` True
-      T.isInfixOf "<td" result `shouldBe` True
-      T.isInfixOf "</td>" result `shouldBe` True
+      result `shouldBe` [i|<td>
+  #{s1}#{s2}</td>|]
 
     it "implements Monoid" $ do
       let s = "test"
-          cell = fromString s :: Cell
+          cell = fromString s :: Cell c
       let result1 = renderText (htmlFromCell (\_ -> V.tag "td" mempty) (cell <> mempty))
           result2 = renderText (htmlFromCell (\_ -> V.tag "td" mempty) cell)
       result1 `shouldBe` result2
@@ -63,22 +61,39 @@ spec = do
     it "generates correct HTML structure" $ do
       let html = encodeHtmlTable mempty personColonnade people
       let result = renderText html
-      T.isInfixOf "<table" result `shouldBe` True
-      T.isInfixOf "<thead" result `shouldBe` True
-      T.isInfixOf "<tbody" result `shouldBe` True
-      T.isInfixOf "<th>Name</th>" result `shouldBe` True
-      T.isInfixOf "<th>Age</th>" result `shouldBe` True
-      T.isInfixOf "<td>Alice</td>" result `shouldBe` True
-      T.isInfixOf "<td>30</td>" result `shouldBe` True
-      T.isInfixOf "<td>Bob</td>" result `shouldBe` True
-      T.isInfixOf "<td>25</td>" result `shouldBe` True
+      result `shouldBe` [i|<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Age</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Alice</td>
+      <td>30</td>
+    </tr>
+    <tr>
+      <td>Bob</td>
+      <td>25</td>
+    </tr>
+  </tbody>
+</table>|]
 
     it "preserves table attributes" $ do
       let attr = "class"
           val = "test-table"
           html = encodeHtmlTable (Attributes [] (Map.singleton attr val)) personColonnade []
           rendered = renderText html
-      T.isInfixOf val rendered `shouldBe` True
+      rendered `shouldBe` [i|<table class='#{val}'>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Age</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>|]
 
   describe "encodeCellTable" $ do
     let personColonnade = mconcat
@@ -90,35 +105,43 @@ spec = do
     it "preserves cell attributes" $ do
       let html = encodeCellTable mempty personColonnade people
           rendered = renderText html
-      T.isInfixOf "name" rendered `shouldBe` True
-      T.isInfixOf "age" rendered `shouldBe` True
+      rendered `shouldBe` [i|<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Age</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class='name'>Alice</td>
+      <td class='age'>30</td>
+    </tr>
+    <tr>
+      <td class='name'>Bob</td>
+      <td class='age'>25</td>
+    </tr>
+  </tbody>
+</table>|]
 
   describe "Cell constructors" $ do
     it "charCell creates valid HTML" $ do
       let c = 'a'
           cell = charCell c
       let result = renderText (htmlFromCell (\_ -> V.tag "td" mempty) cell)
-      T.isInfixOf (T.singleton c) result `shouldBe` True
-      T.isInfixOf "<td" result `shouldBe` True
-      T.isInfixOf "</td>" result `shouldBe` True
+      result `shouldBe` [i|<td>#{c}</td>|]
 
     it "stringCell creates valid HTML" $ do
       let s = "test"
           cell = stringCell s
       let result = renderText (htmlFromCell (\_ -> V.tag "td" mempty) cell)
-      T.isInfixOf (T.pack s) result `shouldBe` True
-      T.isInfixOf "<td" result `shouldBe` True
-      T.isInfixOf "</td>" result `shouldBe` True
+      result `shouldBe` [i|<td>#{s}</td>|]
 
     it "textCell creates valid HTML" $ do
       let t = "test" :: T.Text
           cell = textCell t
       let result = renderText (htmlFromCell (\_ -> V.tag "td" mempty) cell)
-      T.isInfixOf t result `shouldBe` True
-      T.isInfixOf "<td" result `shouldBe` True
-      T.isInfixOf "</td>" result `shouldBe` True
-
-  
+      result `shouldBe` [i|<td>#{t}</td>|]
 
   describe "encodeTable" $ do
     let personColonnade = mconcat
@@ -132,13 +155,26 @@ spec = do
             (E.headednessPure (Attributes [] (Map.singleton "class" "head"), Attributes [] (Map.singleton "class" "head-row")))
             (Attributes [] (Map.singleton "class" "body"))
             (\_ -> Attributes [] (Map.singleton "class" "row"))
-            (\_ -> V.tag "td" mempty)
+            (\attrs content -> V.tag "i" (\a -> attrs <> a) content)
             (Attributes [] (Map.singleton "class" "table"))
             personColonnade
             people
           rendered = renderText html
-      T.isInfixOf "table" rendered `shouldBe` True
-      T.isInfixOf "head" rendered `shouldBe` True
-      T.isInfixOf "head-row" rendered `shouldBe` True
-      T.isInfixOf "body" rendered `shouldBe` True
-      T.isInfixOf "row" rendered `shouldBe` True
+      rendered `shouldBe` [i|<table class='table'>
+  <thead class='head'>
+    <tr class='head-row'>
+      <th>Name</th>
+      <th>Age</th>
+    </tr>
+  </thead>
+  <tbody class='body'>
+    <tr class='row'>
+      <td>Alice</td>
+      <td>30</td>
+    </tr>
+    <tr class='row'>
+      <td>Bob</td>
+      <td>25</td>
+    </tr>
+  </tbody>
+</table>|]

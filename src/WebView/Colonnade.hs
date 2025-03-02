@@ -34,53 +34,53 @@ import Data.Foldable (for_)
 import Web.View.Types (Attributes)
 
 -- | A table cell with attributes and content
-data Cell = Cell
-  { cellAttributes :: !(Attributes ())  -- ^ Attributes for the td/th element
-  , cellHtml :: !(V.View () ())      -- ^ Content inside the cell
+data Cell c = Cell
+  { cellAttributes :: Attributes c  -- ^ Attributes for the td/th element
+  , cellHtml :: V.View c ()      -- ^ Content inside the cell
   }
 
-instance IsString Cell where
+instance IsString (Cell c) where
   fromString = stringCell
 
-instance Semigroup Cell where
+instance Semigroup (Cell c) where
   Cell attrs1 content1 <> Cell attrs2 content2 = 
     Cell (attrs1 <> attrs2) (content1 >> content2)
 
-instance Monoid Cell where
+instance Monoid (Cell c) where
   mempty = Cell mempty (pure ())
   mappend = (<>)
 
 -- | Create a cell from HTML content
-htmlCell :: V.View () () -> Cell
+htmlCell :: V.View c () -> Cell c
 htmlCell content = Cell mempty content
 
 -- | Create a cell from a string
-stringCell :: String -> Cell
+stringCell :: String -> Cell c
 stringCell = htmlCell . E.text . T.pack
 
 -- | Create a cell from a character
-charCell :: Char -> Cell
+charCell :: Char -> Cell c
 charCell = stringCell . pure
 
 -- | Create a cell from text
-textCell :: T.Text -> Cell
+textCell :: T.Text -> Cell c
 textCell = htmlCell . E.text
 
 -- | Convert a cell to an HTML element
-htmlFromCell :: (Attributes () -> V.View () () -> V.View () ()) -> Cell -> V.View () ()
+htmlFromCell :: (Attributes c -> V.View c () -> V.View c ()) -> (Cell c) -> V.View c ()
 htmlFromCell f (Cell attrs content) = f attrs content
 
 -- | Encode a table with HTML content
 encodeHtmlTable ::
-  forall h f a.
+  forall h f x c.
   (E.Headedness h, Foldable f) =>
   -- | Attributes of @<table>@ element
-  Attributes () ->
+  Attributes c ->
   -- | How to encode data as columns
-  Colonnade h a (V.View () ()) ->
+  Colonnade h x (V.View c ()) ->
   -- | Collection of data
-  f a ->
-  V.View () ()
+  f x ->
+  V.View c ()
 encodeHtmlTable tableAttrs colonnade xs =
   V.tag "table" (\a -> tableAttrs <> a) $ do
     case E.headednessExtract @h of
@@ -98,15 +98,15 @@ encodeHtmlTable tableAttrs colonnade xs =
 
 -- | Encode a table with cells that may have attributes
 encodeCellTable ::
-  forall h f a.
+  forall h f x c.
   (E.Headedness h, Foldable f) =>
   -- | Attributes of @<table>@ element
-  Attributes () ->
+  Attributes c ->
   -- | How to encode data as columns
-  Colonnade h a Cell ->
+  Colonnade h x (Cell c) ->
   -- | Collection of data
-  f a ->
-  V.View () ()
+  f x ->
+  V.View c ()
 encodeCellTable tableAttrs colonnade xs =
   V.tag "table" (\a -> tableAttrs <> a) $ do
     case E.headednessExtract @h of
@@ -124,15 +124,15 @@ encodeCellTable tableAttrs colonnade xs =
 
 -- | Encode a table with sized columns
 encodeCellTableSized ::
-  forall h f a.
+  forall h f x c.
   (E.Headedness h, E.Headedness (E.Sized Int h), Foldable f) =>
   -- | Attributes of @<table>@ element
-  Attributes () ->
+  Attributes c ->
   -- | How to encode data as columns
-  Colonnade (E.Sized Int h) a Cell ->
+  Colonnade (E.Sized Int h) x (Cell c) ->
   -- | Collection of data
-  f a ->
-  V.View () ()
+  f x ->
+  V.View c ()
 encodeCellTableSized tableAttrs colonnade xs =
   V.tag "table" (\a -> tableAttrs <> a) $ do
     case E.headednessExtract @(E.Sized Int h) of
@@ -177,20 +177,20 @@ encodeCappedCellTable ::
 encodeTable ::
   (E.Headedness h, Foldable f) =>
   -- | Attributes and structure for header section
-  h (Attributes (), Attributes ()) ->
+  h (Attributes c, Attributes c) ->
   -- | Attributes for tbody element
-  Attributes () ->
+  Attributes c ->
   -- | Attributes for each tr element
-  (a -> Attributes ()) ->
+  (x -> Attributes c) ->
   -- | Cell wrapper function
-  (Attributes () -> V.View () () -> V.View () ()) ->
+  (Attributes c -> V.View c () -> V.View c ()) ->
   -- | Table attributes
-  Attributes () ->
+  Attributes c ->
   -- | How to encode data as columns
-  Colonnade h a (V.View () ()) ->
+  Colonnade h x (V.View c ()) ->
   -- | Collection of data
-  f a ->
-  V.View () ()
+  f x ->
+  V.View c ()
 encodeTable mheadAttrs bodyAttrs trAttrs wrapper tableAttrs colonnade xs =
   V.tag "table" (\a -> tableAttrs <> a) $ do
     case E.headednessExtract of
@@ -199,8 +199,10 @@ encodeTable mheadAttrs bodyAttrs trAttrs wrapper tableAttrs colonnade xs =
         (headAttrs, headTrAttrs) -> do
           V.tag "thead" (\a -> headAttrs <> a) $
             V.tag "tr" (\a -> headTrAttrs <> a) $
-              E.headerMonadicGeneral_ colonnade (wrapper mempty)
+              E.headerMonadicGeneral_ colonnade (\content ->
+                wrapper mempty (V.tag "th" mempty content))
     V.tag "tbody" (\a -> bodyAttrs <> a) $
       for_ xs $ \x ->
         V.tag "tr" (\a -> trAttrs x <> a) $
-          E.rowMonadic colonnade (wrapper mempty) x
+          E.rowMonadic colonnade (\content ->
+            wrapper mempty (V.tag "td" mempty content)) x
