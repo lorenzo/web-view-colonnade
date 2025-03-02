@@ -155,7 +155,7 @@ spec = do
             (E.headednessPure (Attributes [] (Map.singleton "class" "head"), Attributes [] (Map.singleton "class" "head-row")))
             (Attributes [] (Map.singleton "class" "body"))
             (\_ -> Attributes [] (Map.singleton "class" "row"))
-            (\attrs content -> V.tag "i" (\a -> attrs <> a) content)
+            (\tagFn content -> tagFn (Attributes [] (Map.singleton "class" "i")) content)
             (Attributes [] (Map.singleton "class" "table"))
             personColonnade
             people
@@ -163,18 +163,18 @@ spec = do
       rendered `shouldBe` [i|<table class='table'>
   <thead class='head'>
     <tr class='head-row'>
-      <th>Name</th>
-      <th>Age</th>
+      <th class='i'>Name</th>
+      <th class='i'>Age</th>
     </tr>
   </thead>
   <tbody class='body'>
     <tr class='row'>
-      <td>Alice</td>
-      <td>30</td>
+      <td class='i'>Alice</td>
+      <td class='i'>30</td>
     </tr>
     <tr class='row'>
-      <td>Bob</td>
-      <td>25</td>
+      <td class='i'>Bob</td>
+      <td class='i'>25</td>
     </tr>
   </tbody>
 </table>|]

@@ -140,8 +140,12 @@ encodeCellTableSized tableAttrs colonnade xs =
           E.rowMonadic colonnade (\cell ->
             htmlFromCell (\attrs -> V.tag "td" (\a -> attrs <> a)) cell) x
 
--- | Encode a table with full control over attributes and structure
+{- | Encode a table. This handles a very general case and
+  is seldom needed by users. One of the arguments provided is
+  used to add attributes to the generated @\<tr\>@ elements.
+-}
 encodeTable ::
+  forall h f x v c.
   (E.Headedness h, Foldable f) =>
   -- | Attributes and structure for header section
   h (Attributes c, Attributes c) ->
@@ -150,26 +154,53 @@ encodeTable ::
   -- | Attributes for each tr element
   (x -> Attributes c) ->
   -- | Cell wrapper function
-  (Attributes c -> V.View c () -> V.View c ()) ->
+  ((Attributes c -> V.View c () -> V.View c ()) -> v -> V.View c ()) ->
   -- | Table attributes
   Attributes c ->
   -- | How to encode data as columns
-  Colonnade h x (V.View c ()) ->
+  Colonnade h x v ->
   -- | Collection of data
   f x ->
   V.View c ()
-encodeTable mheadAttrs bodyAttrs trAttrs wrapper tableAttrs colonnade xs =
-  V.tag "table" (\a -> tableAttrs <> a) $ do
-    case E.headednessExtract of
-      Nothing -> pure ()
-      Just extract -> case extract mheadAttrs of
-        (headAttrs, headTrAttrs) -> do
-          V.tag "thead" (\a -> headAttrs <> a) $
-            V.tag "tr" (\a -> headTrAttrs <> a) $
-              E.headerMonadicGeneral_ colonnade (\content ->
-                wrapper mempty (V.tag "th" mempty content))
-    V.tag "tbody" (\a -> bodyAttrs <> a) $
-      for_ xs $ \x ->
-        V.tag "tr" (\a -> trAttrs x <> a) $
-          E.rowMonadic colonnade (\content ->
-            wrapper mempty (V.tag "td" mempty content)) x
+encodeTable mtheadAttrs tbodyAttrs trAttrs wrapContent tableAttrs colonnade xs =
+  V.tag "table" (const tableAttrs) $ do
+    d1 <- case E.headednessExtractForall of
+      Nothing -> pure mempty
+      Just extractForall -> do
+        let (theadAttrs, theadTrAttrs) = extract mtheadAttrs
+        V.tag "thead" (const theadAttrs) $
+          V.tag "tr" (const theadTrAttrs) $ do
+            foldlMapM' (wrapContent (\a -> V.tag "th" (const a)) . extract . E.oneColonnadeHead) (E.getColonnade colonnade)
+        where
+          extract :: forall y. h y -> y
+          extract = E.runExtractForall extractForall
+    d2 <- encodeBody trAttrs wrapContent tbodyAttrs colonnade xs
+    pure (d1 <> d2)
+
+foldlMapM' :: forall g b a m. (Foldable g, Monoid b, Monad m) => (a -> m b) -> g a -> m b
+foldlMapM' f xs = foldr f' pure xs mempty
+ where
+  f' :: a -> (b -> m b) -> b -> m b
+  f' x k bl = do
+    br <- f x
+    let !b = mappend bl br
+    k b
+
+encodeBody ::
+  (Foldable f) =>
+  -- | Attributes of each @\<tr\>@ element
+  (a -> Attributes c) ->
+  -- | Wrap content and convert to 'Html'
+  ((Attributes c -> V.View c () -> V.View c ()) -> v -> V.View c ()) ->
+  -- | Attributes of @\<tbody\>@ element
+  Attributes c ->
+  -- | How to encode data as a row
+  Colonnade h a v ->
+  -- | Collection of data
+  f a ->
+  V.View c ()
+encodeBody trAttrs wrapContent tbodyAttrs colonnade xs = do
+  V.tag "tbody" (const tbodyAttrs) $ do
+    for_ xs $ \x -> do
+      V.tag "tr" (const (trAttrs x)) $ do
+        E.rowMonadic colonnade (wrapContent (\a -> V.tag "td" (const a))) x
