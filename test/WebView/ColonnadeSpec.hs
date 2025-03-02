@@ -118,41 +118,7 @@ spec = do
       T.isInfixOf "<td" result `shouldBe` True
       T.isInfixOf "</td>" result `shouldBe` True
 
-  describe "encodeCappedTable" $ do
-    let personColonnade = mconcat
-          [ C.headed "Name" (E.text . name)
-          , C.headed "Age" (E.text . T.pack . show . age)
-          , C.headed "Extra1" (const $ E.text "extra1")
-          , C.headed "Extra2" (const $ E.text "extra2")
-          ]
-        people = [Person "Alice" 30, Person "Bob" 25]
-
-    it "includes all columns (capping not implemented yet)" $ do
-      let html = encodeCappedTable 2 mempty personColonnade people
-          rendered = renderText html
-      T.isInfixOf "Name" rendered `shouldBe` True
-      T.isInfixOf "Age" rendered `shouldBe` True
-      -- Note: Column capping is not implemented yet, so these will be included
-      T.isInfixOf "Extra1" rendered `shouldBe` True
-      T.isInfixOf "Extra2" rendered `shouldBe` True
-
-  describe "encodeCappedCellTable" $ do
-    let personColonnade = mconcat
-          [ C.headed "Name" (\p -> Cell (Attributes [] (Map.singleton "class" "name")) (E.text $ name p))
-          , C.headed "Age" (\p -> Cell (Attributes [] (Map.singleton "class" "age")) (E.text . T.pack . show $ age p))
-          , C.headed "Extra1" (const $ Cell mempty (E.text "extra1"))
-          , C.headed "Extra2" (const $ Cell mempty (E.text "extra2"))
-          ]
-        people = [Person "Alice" 30, Person "Bob" 25]
-
-    it "includes all columns and preserves attributes (capping not implemented yet)" $ do
-      let html = encodeCappedCellTable 2 mempty personColonnade people
-          rendered = renderText html
-      T.isInfixOf "name" rendered `shouldBe` True
-      T.isInfixOf "age" rendered `shouldBe` True
-      -- Note: Column capping is not implemented yet, so these will be included
-      T.isInfixOf "extra1" rendered `shouldBe` True
-      T.isInfixOf "extra2" rendered `shouldBe` True
+  
 
   describe "encodeTable" $ do
     let personColonnade = mconcat

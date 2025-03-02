@@ -13,8 +13,6 @@ module WebView.Colonnade
     encodeHtmlTable
   , encodeCellTable
   , encodeCellTableSized
-  , encodeCappedTable
-  , encodeCappedCellTable
   , encodeTable
   
     -- * Cell
@@ -150,41 +148,30 @@ encodeCellTableSized tableAttrs colonnade xs =
           E.rowMonadic colonnade (\cell ->
             htmlFromCell (\attrs -> V.tag "td" (\a -> attrs <> a)) cell) x
 
--- | Encode a table with capped columns and HTML content
-encodeCappedTable ::
-  (E.Headedness h, Foldable f) =>
-  -- | Maximum number of columns
-  Int ->
-  -- | Attributes of @<table>@ element
-  Attributes () ->
-  -- | How to encode data as columns
-  Colonnade h a (V.View () ()) ->
-  -- | Collection of data
-  f a ->
-  V.View () ()
-encodeCappedTable _ tableAttrs colonnade xs =
-  -- TODO: Implement proper column capping functionality
-  -- We need to find a way to limit the number of columns in the Colonnade
-  -- For now, we're just passing through all columns
-  encodeHtmlTable tableAttrs colonnade xs
 
--- | Encode a table with capped columns and cells that may have attributes
+{- | Encode a table with tiered header rows.
+<table>
+    <thead>
+        <tr class='category'>
+            <th colspan="2">Personal</th>
+            <th colspan="1">Work</th>
+        </tr>
+        <tr class="subcategory">
+            <th colspan="1">Name</th>
+            <th colspan="1">Age</th>
+            <th colspan="1">Dept.</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>Thaddeus</td>
+            <td>34</td>
+            <td class='sales'>Sales</td>
+        </tr>
+    </tbody>
+</table>
 encodeCappedCellTable ::
-  (E.Headedness h, Foldable f) =>
-  -- | Maximum number of columns
-  Int ->
-  -- | Attributes of @<table>@ element
-  Attributes () ->
-  -- | How to encode data as columns
-  Colonnade h a Cell ->
-  -- | Collection of data
-  f a ->
-  V.View () ()
-encodeCappedCellTable _ tableAttrs colonnade xs =
-  -- TODO: Implement proper column capping functionality
-  -- We need to find a way to limit the number of columns in the Colonnade
-  -- For now, we're just passing through all columns
-  encodeCellTable tableAttrs colonnade xs
+-}
 
 -- | Encode a table with full control over attributes and structure
 encodeTable ::
