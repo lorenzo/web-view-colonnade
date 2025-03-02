@@ -265,7 +265,7 @@ htmlFromCell f (Cell attrs content) = f attrs content
 encodeHtmlTable ::
   forall h f x c.
   (E.Headedness h, Foldable f) =>
-  -- | Attributes of @<table>@ element
+  -- | Attributes of @\<table\>@ element
   Mod c ->
   -- | How to encode data as columns
   Colonnade h x (V.View c ()) ->
@@ -283,7 +283,7 @@ encodeHtmlTable =
 encodeCellTable ::
   forall h f x c.
   (E.Headedness h, Foldable f) =>
-  -- | Attributes of @<table>@ element
+  -- | Attributes of @\<table\>@ element
   Mod c ->
   -- | How to encode data as columns
   Colonnade h x (Cell c) ->
