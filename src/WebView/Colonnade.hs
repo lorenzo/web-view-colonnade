@@ -81,20 +81,12 @@ encodeHtmlTable ::
   -- | Collection of data
   f x ->
   V.View c ()
-encodeHtmlTable tableAttrs colonnade xs =
-  V.tag "table" (\a -> tableAttrs <> a) $ do
-    case E.headednessExtract @h of
-      Nothing -> pure ()
-      Just _ -> do
-        V.tag "thead" mempty $
-          V.tag "tr" mempty $
-            E.headerMonadicGeneral_ colonnade (\content ->
-              V.tag "th" mempty content)
-    V.tag "tbody" mempty $
-      for_ xs $ \x ->
-        V.tag "tr" mempty $
-          E.rowMonadic colonnade (\content ->
-            V.tag "td" mempty content) x
+encodeHtmlTable =
+  encodeTable
+    (E.headednessPure (mempty, mempty))
+    mempty
+    (const mempty)
+    (\el -> el mempty)
 
 -- | Encode a table with cells that may have attributes
 encodeCellTable ::
@@ -107,20 +99,12 @@ encodeCellTable ::
   -- | Collection of data
   f x ->
   V.View c ()
-encodeCellTable tableAttrs colonnade xs =
-  V.tag "table" (\a -> tableAttrs <> a) $ do
-    case E.headednessExtract @h of
-      Nothing -> pure ()
-      Just _ -> do
-        V.tag "thead" mempty $
-          V.tag "tr" mempty $
-            E.headerMonadicGeneral_ colonnade (\cell ->
-              htmlFromCell (\attrs -> V.tag "th" (\a -> attrs <> a)) cell)
-    V.tag "tbody" mempty $
-      for_ xs $ \x ->
-        V.tag "tr" mempty $
-          E.rowMonadic colonnade (\cell ->
-            htmlFromCell (\attrs -> V.tag "td" (\a -> attrs <> a)) cell) x
+encodeCellTable =
+  encodeTable
+    (E.headednessPure (mempty, mempty))
+    mempty
+    (const mempty)
+    htmlFromCell
 
 -- | Encode a table with sized columns
 encodeCellTableSized ::
@@ -133,20 +117,13 @@ encodeCellTableSized ::
   -- | Collection of data
   f x ->
   V.View c ()
-encodeCellTableSized tableAttrs colonnade xs =
-  V.tag "table" (\a -> tableAttrs <> a) $ do
-    case E.headednessExtract @(E.Sized Int h) of
-      Nothing -> pure ()
-      Just _ -> do
-        V.tag "thead" mempty $
-          V.tag "tr" mempty $
-            E.headerMonadicGeneral_ colonnade (\cell ->
-              htmlFromCell (\attrs -> V.tag "th" (\a -> attrs <> a)) cell)
-    V.tag "tbody" mempty $
-      for_ xs $ \x ->
-        V.tag "tr" mempty $
-          E.rowMonadic colonnade (\cell ->
-            htmlFromCell (\attrs -> V.tag "td" (\a -> attrs <> a)) cell) x
+encodeCellTableSized =
+  encodeTableSized
+    (E.headednessPure ([], []))
+    mempty
+    (const mempty)
+    htmlFromCell
+
 
 
 {- | Encode a table with tiered header rows.

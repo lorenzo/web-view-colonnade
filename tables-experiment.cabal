@@ -63,10 +63,7 @@ library
   exposed-modules:  WebView.Colonnade
 
   -- Modules included in this library but not exported.
-  -- cabal-fmt: expand src
-  other-modules:
-    MyLib
-    WebView.Colonnade
+  -- other-modules:
 
   -- LANGUAGE extensions used by modules in this package.
   -- other-extensions:
