@@ -4,16 +4,12 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeApplications #-}
 
-{- | Build HTML tables using @web-view@ and @colonnade@. This module provides
-  functionality similar to @lucid-colonnade@ and @blaze-colonnade@ but for the
-  web-view library.
--}
+
 module WebView.Colonnade
   ( -- * Apply
     encodeHtmlTable
   , encodeCellTable
   , encodeTable
-  
     -- * Cell
   , Cell(..)
   , charCell
@@ -31,6 +27,202 @@ import qualified Data.Text as T
 import Data.String (IsString(..))
 import Data.Foldable (for_)
 import Web.View.Types (Mod)
+
+{- | Build HTML tables using @web-view@ and @colonnade@. This module provides
+  functionality similar to @lucid-colonnade@ and @blaze-colonnade@ but for the
+  web-view library.
+
+  = Usage
+
+  We start with a few necessary imports and some example data types:
+
+  >>> :set -XOverloadedStrings
+  >>> import Data.Monoid (mconcat,(<>))
+  >>> import Data.Char (toLower)
+  >>> import Data.Profunctor (Profunctor(lmap))
+  >>> import Colonnade (Colonnade,Headed,Headless,headed,cap,Fascia(..))
+  >>> import Web.View (renderText)
+  >>> import qualified Web.View.View as V
+  >>> import qualified Web.View.Element as E
+  >>> import qualified Web.View.Style as S
+  >>> data Department = Management | Sales | Engineering deriving (Show,Eq)
+  >>> data Employee = Employee { name :: String, department :: Department, age :: Int }
+
+  We define some employees that we will display in a table:
+
+  >>> :{
+  let employees =
+        [ Employee "Thaddeus" Sales 34
+        , Employee "Lucia" Engineering 33
+        , Employee "Pranav" Management 57
+        ]
+  :}
+
+  Let's build a table that displays the name and the age
+  of an employee. Additionally, we will emphasize the names of
+  engineers using a @\<strong\>@ tag.
+
+  >>> :{
+  let tableEmpA :: Colonnade Headed Employee (V.View c ())
+      tableEmpA = mconcat
+        [ headed "Name" $ \emp -> case department emp of
+            Engineering -> E.strong (E.text (T.pack (name emp)))
+            _ -> E.text (T.pack (name emp))
+        , headed "Age" (E.text . T.pack . show . age)
+        ]
+  :}
+
+  The type signature of @tableEmpA@ is inferrable but is written
+  out for clarity in this example. Note that the first
+  argument to 'headed' can be passed as a string literal due to the @OverloadedStrings@ extension.
+  Let's continue:
+
+  >>> let customAttrs = V.extClass "stylish-table" <> V.att "id" "main-table"
+  >>> putStrLn $ renderText (encodeHtmlTable customAttrs tableEmpA employees)
+  <table class='stylish-table' id='main-table'>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Age</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Thaddeus</td>
+        <td>34</td>
+      </tr>
+      <tr>
+        <td><strong>Lucia</strong></td>
+        <td>33</td>
+      </tr>
+      <tr>
+        <td>Pranav</td>
+        <td>57</td>
+      </tr>
+    </tbody>
+  </table>
+
+  Excellent. As expected, Lucia's name is wrapped in a @\<strong\>@ tag
+  since she is an engineer.
+
+  One limitation of using @V.View@ as the content
+  type of a 'Colonnade' is that we are unable to add attributes to
+  the @\<td\>@ and @\<th\>@ elements. This library provides the 'Cell' type
+  to work around this problem. A 'Cell' is just a @V.View@ content and a set
+  of attributes to be applied to its parent @\<th\>@ or @\<td\>@. To illustrate
+  its use, another employee table will be built. This table will
+  contain a single column indicating the department of each employee. Each
+  cell will be assigned a class name based on the department. Let's build a table 
+  that encodes departments:
+
+  >>> :{
+  let tableDept :: Colonnade Headed Department (Cell c)
+      tableDept = mconcat
+        [ headed "Dept." $ \d -> Cell
+            (V.extClass (T.pack (map toLower (show d))))
+            (E.text (T.pack (show d)))
+        ]
+  :}
+
+  Again, @OverloadedStrings@ plays a role, this time allowing the
+  literal @"Dept."@ to be accepted as a value of type 'Cell'. To avoid
+  this extension, 'stringCell' could be used to upcast the 'String'.
+  To try out our 'Colonnade' on a list of departments, we need to use
+  'encodeCellTable' instead of 'encodeHtmlTable':
+
+  >>> let twoDepts = [Sales,Management]
+  >>> putStrLn $ renderText (encodeCellTable customAttrs tableDept twoDepts)
+  <table class='stylish-table' id='main-table'>
+    <thead>
+      <tr>
+        <th>Dept.</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class='sales'>Sales</td>
+      </tr>
+      <tr>
+        <td class='management'>Management</td>
+      </tr>
+    </tbody>
+  </table>
+
+  The attributes on the @\<td\>@ elements show up as they are expected to.
+  Now, we take advantage of the @Profunctor@ instance of 'Colonnade' to allow
+  this to work on @Employee@\'s instead:
+
+  >>> :t lmap
+  lmap :: Profunctor p => (a -> b) -> p b c -> p a c
+  >>> let tableEmpB = lmap department tableDept
+  >>> :t tableEmpB
+  tableEmpB :: Colonnade Headed Employee (Cell c)
+  >>> putStrLn $ renderText (encodeCellTable customAttrs tableEmpB employees)
+  <table class='stylish-table' id='main-table'>
+    <thead>
+      <tr>
+        <th>Dept.</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class='sales'>Sales</td>
+      </tr>
+      <tr>
+        <td class='engineering'>Engineering</td>
+      </tr>
+      <tr>
+        <td class='management'>Management</td>
+      </tr>
+    </tbody>
+  </table>
+
+  This table shows the department of each of our three employees, additionally
+  making a lowercased version of the department into a class name for the @\<td\>@.
+  This table is nice for illustrative purposes, but it does not provide all the
+  information that we have about the employees. If we combine it with the
+  earlier table we wrote, we can present everything in the table. One small
+  roadblock is that the types of @tableEmpA@ and @tableEmpB@ do not match, which
+  prevents a straightforward monoidal append:
+
+  >>> :t tableEmpA
+  tableEmpA :: Colonnade Headed Employee (V.View c ())
+  >>> :t tableEmpB
+  tableEmpB :: Colonnade Headed Employee (Cell c)
+
+  We can upcast the content type with 'fmap':
+
+  >>> let tableEmpC = fmap htmlCell tableEmpA <> tableEmpB
+  >>> :t tableEmpC
+  tableEmpC :: Colonnade Headed Employee (Cell c)
+  >>> putStrLn $ renderText (encodeCellTable customAttrs tableEmpC employees)
+  <table class='stylish-table' id='main-table'>
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Age</th>
+        <th>Dept.</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Thaddeus</td>
+        <td>34</td>
+        <td class='sales'>Sales</td>
+      </tr>
+      <tr>
+        <td><strong>Lucia</strong></td>
+        <td>33</td>
+        <td class='engineering'>Engineering</td>
+      </tr>
+      <tr>
+        <td>Pranav</td>
+        <td>57</td>
+        <td class='management'>Management</td>
+      </tr>
+    </tbody>
+  </table>
+-}
 
 -- | A table cell with attributes and content
 data Cell c = Cell

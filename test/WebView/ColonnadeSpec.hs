@@ -3,7 +3,6 @@
 module WebView.ColonnadeSpec (spec) where
 
 import Test.Hspec
-import Test.QuickCheck
 import WebView.Colonnade
 import qualified Web.View.View as V
 import qualified Web.View.Style as V
@@ -19,10 +18,6 @@ data Person = Person
   { name :: T.Text
   , age :: Int
   } deriving (Show, Eq)
-
-instance Arbitrary Person where
-  arbitrary = Person <$> (T.pack <$> listOf1 (elements ['a'..'z']))
-                    <*> choose (0, 120)
 
 spec :: Spec
 spec = do
