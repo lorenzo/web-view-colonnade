@@ -1,4 +1,4 @@
-cabal-version: 3.4
+cabal-version:   3.4
 
 -- The cabal-version field refers to the version of the .cabal specification,
 -- and can be different from the cabal-install (the tool) version and the
@@ -12,7 +12,7 @@ cabal-version: 3.4
 --   http://haskell.org/cabal/users-guide/
 --
 -- The name of the package.
-name:          web-view-colonnade
+name:            web-view-colonnade
 
 -- The package version.
 -- See the Haskell package versioning policy (PVP) for standards
@@ -21,10 +21,11 @@ name:          web-view-colonnade
 -- PVP summary:     +-+------- breaking API changes
 --                  | | +----- non-breaking API additions
 --                  | | | +--- code changes with no API change
-version:       0.1.0.0
+version:         0.1.0.0
 
 -- A short (one-line) description of the package.
--- synopsis:
+synopsis:        Build HTML tables using web-view and colonnade.
+homepage:        https://github.com/lorenzo/web-view-colonnade
 
 -- A longer description of the package.
 description:
@@ -33,24 +34,23 @@ description:
   web-view library.
 
 -- The license under which the package is released.
-license:       MIT
+license:         MIT
 
 -- The file containing the license text.
-license-file:  LICENSE
+license-file:    LICENSE
 
 -- The package author(s).
-author:        José Lorenzo Rodríguez
+author:          José Lorenzo Rodríguez
 
 -- An email address to which users can send suggestions, bug reports, and patches.
-maintainer:    lorenzo@users.noreply.github.com
+maintainer:      lorenzo@users.noreply.github.com
 
 -- A copyright notice.
--- copyright:
-category:      Development
-build-type:    Simple
+category:        Web
+build-type:      Simple
 
 -- Extra doc files to be distributed with the package, such as a CHANGELOG or a README.
---extra-doc-files: CHANGELOG.md
+extra-doc-files: README.md
 
 -- Extra source files to be distributed with the package, such as examples, or a tutorial module.
 -- extra-source-files:
@@ -58,9 +58,18 @@ build-type:    Simple
 common warnings
   ghc-options: -Wall
 
+common deps
+  build-depends:
+    , base        >=4.18.2.1 && <5
+    , colonnade   >=1.2.0    && <1.3
+    , containers  >=0.6.7    && <0.7
+    , text        >=2.0.2    && <2.1
+    , vector      >=0.13.2   && <0.14
+    , web-view    >=0.6.0    && <0.7
+
 library
   -- Import common warning flags.
-  import:           warnings
+  import:           warnings, deps
 
   -- Modules exported by the library.
   exposed-modules:  WebView.Colonnade
@@ -69,16 +78,7 @@ library
   -- other-modules:
 
   -- LANGUAGE extensions used by modules in this package.
-  -- other-extensions:
-
-  -- Other library packages from which modules are imported.
-  build-depends:
-    , base        ^>=4.18.2.1
-    , colonnade
-    , containers
-    , text
-    , vector
-    , web-view
+  -- other-extensions:  
 
   -- Directories containing source files.
   hs-source-dirs:   src
@@ -88,7 +88,7 @@ library
 
 test-suite web-view-colonnade-test
   -- Import common warning flags.
-  import:           warnings
+  import:           warnings, deps
 
   -- Base language which the package is written in.
   default-language: GHC2021
@@ -109,11 +109,8 @@ test-suite web-view-colonnade-test
   main-is:          Main.hs
 
   -- Test dependencies.
-  build-depends:
-    , base                ^>=4.18.2.1
-    , colonnade
-    , hspec
-    , string-interpolate
-    , text
-    , web-view
-    , web-view-colonnade
+  build-depends:    web-view-colonnade
+
+source-repository head
+  type:     git
+  location: https://github.com/lorenzo/web-view-colonnade
