@@ -113,7 +113,7 @@ We welcome contributions to web-view-colonnade! This project uses a nix-based de
 2. Install [devenv](https://devenv.sh/getting-started/)
 3. Clone this repository:
    ```
-   git clone https://github.com/yourusername/web-view-colonnade.git
+   git clone https://github.com/lorenzo/web-view-colonnade.git
    cd web-view-colonnade
    ```
 4. Start the development shell:
