@@ -6,7 +6,12 @@
 
 
 module WebView.Colonnade
-  ( -- * Apply
+  ( -- * What is this?
+    -- $whatis
+    -- * How to use this library
+    -- $use
+
+    -- * Encoding functions
     encodeHtmlTable
   , encodeCellTable
   , encodeTable
@@ -28,9 +33,13 @@ import Data.String (IsString(..))
 import Data.Foldable (for_)
 import Web.View.Types (Mod)
 
-{- | Build HTML tables using @web-view@ and @colonnade@. This module provides
+{- $whatis
+  Build HTML tables using @web-view@ and @colonnade@. This module provides
   functionality similar to @lucid-colonnade@ and @blaze-colonnade@ but for the
   web-view library.
+-}
+
+{- $use
 
   = Usage
 

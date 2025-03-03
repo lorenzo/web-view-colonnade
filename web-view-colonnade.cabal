@@ -27,7 +27,10 @@ version:       0.1.0.0
 -- synopsis:
 
 -- A longer description of the package.
--- description:
+description:
+  Build HTML tables using web-view and colonnade. This module provides
+  functionality similar to @lucid-colonnade@ and @blaze-colonnade@ but for the
+  web-view library.
 
 -- The license under which the package is released.
 license:       MIT
